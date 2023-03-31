@@ -1,0 +1,63 @@
+import boto3
+import json
+
+client = boto3.client('iam')
+
+policy_document = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/TABLE_NAME"
+        }
+    ]
+}
+
+policy = json.dumps(policy_document)
+
+response = client.create_policy(
+    PolicyName='lambda-dynamodb-access',
+    PolicyDocument=policy
+)
+
+policy_arn = response['Policy']['Arn']
+
+role_name = 'lambda-role'
+
+assume_role_policy = {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+assume_role_policy = json.dumps(assume_role_policy)
+
+response = client.create_role(
+    RoleName=role_name,
+    AssumeRolePolicyDocument=assume_role_policy
+)
+
+role_arn = response['Role']['Arn']
+
+response = client.attach_role_policy(
+    PolicyArn=policy_arn,
+    RoleName=role_name
+)
+
+print(f'Policy created with ARN: {policy_arn}')
+print(f'Role created with ARN: {role_arn}')
